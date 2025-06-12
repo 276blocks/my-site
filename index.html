@@ -20,22 +20,128 @@
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
 <style>
-  /* ----- glass + misc styles (unchanged) ----- */
-  .glass-card{background:rgba(255,255,255,.1);backdrop-filter:blur(10px);
-              border-radius:12px;border:1px solid rgba(255,255,255,.18);
-              box-shadow:0 8px 32px 0 rgba(31,38,135,.37)}
-  .dark .glass-card{background:rgba(30,30,30,.7);
-                    border:1px solid rgba(255,255,255,.1)}
-  .chart-container{position:relative;height:400px}
-  .spinner{animation:spin 1s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
-  .btn-group input[type="radio"]:checked+label{background-color:#3b82f6;color:#fff}
+  /* ----- glass + misc styles ----- */
+  .glass-card {
+    background: rgba(255, 255, 255, .1);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, .18);
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, .37);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .dark .glass-card {
+    background: rgba(30, 30, 30, .7);
+    border: 1px solid rgba(255, 255, 255, .1);
+  }
+  
+  .chart-container {
+    position: relative;
+    height: 400px;
+  }
+  
+  .spinner {
+    animation: spin 1s linear infinite;
+    display: inline-block;
+  }
+  
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  
+  .btn-group input[type="radio"]:checked+label {
+    background-color: #3b82f6;
+    color: #fff;
+  }
+  
+  .btn-group label {
+    padding: 0.5rem 1rem;
+    margin: 0;
+    cursor: pointer;
+    background-color: #e5e7eb;
+  }
+  
+  .dark .btn-group label {
+    background-color: #374151;
+  }
+  
+  .controls-card {
+    margin-bottom: 1.5rem;
+  }
 </style>
 </head>
-<body class="bg-gray-100 dark:bg-gray-900 transition-colors duration-200">
+<body class="bg-gray-100 dark:bg-gray-900 transition-colors duration-200 text-gray-800 dark:text-gray-200">
+  <!-- Header with theme toggle -->
+  <header class="bg-white dark:bg-gray-800 shadow-sm p-4">
+    <div class="container mx-auto flex justify-between items-center">
+      <h1 class="text-xl font-bold">Bitcoin Analytics Dashboard</h1>
+      <button id="theme-toggle" class="p-2 rounded-full bg-gray-200 dark:bg-gray-700">
+        <i id="theme-icon" class="fas fa-sun"></i>
+      </button>
+    </div>
+  </header>
 
-<!-- ░░ UI markup (navbar, sidebar, cards …) – UNCHANGED ░░ -->
-<!-- (… all your existing HTML up to the end of the body …) -->
-<!-- ─────────────────────────────────────────────────────── -->
+  <main class="container mx-auto p-4">
+    <!-- Date Range Controls -->
+    <div class="glass-card controls-card">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label for="start-date" class="block mb-2">Start Date</label>
+          <input type="date" id="start-date" class="w-full p-2 rounded border border-gray-300 dark:bg-gray-700 dark:border-gray-600">
+        </div>
+        <div>
+          <label for="end-date" class="block mb-2">End Date</label>
+          <input type="date" id="end-date" class="w-full p-2 rounded border border-gray-300 dark:bg-gray-700 dark:border-gray-600">
+        </div>
+      </div>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block mb-2">Secondary Chart Type</label>
+          <select id="plot-type" class="w-full p-2 rounded border border-gray-300 dark:bg-gray-700 dark:border-gray-600">
+            <option value="deviation">Deviation from Trend</option>
+            <option value="4yr">4-Year Moving Average</option>
+            <option value="price">Price</option>
+          </select>
+        </div>
+        <div>
+          <label class="block mb-2">Scale Type</label>
+          <div class="btn-group flex">
+            <input type="radio" id="linear-scale" name="scale" value="linear" class="hidden" checked>
+            <label for="linear-scale" class="rounded-l border border-r-0 border-gray-300 dark:border-gray-600">Linear</label>
+            
+            <input type="radio" id="log-scale" name="scale" value="log-log" class="hidden">
+            <label for="log-scale" class="rounded-r border border-l-0 border-gray-300 dark:border-gray-600">Log</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Chart -->
+    <div class="glass-card">
+      <h2 class="text-lg font-semibold mb-4">Bitcoin Price History</h2>
+      <div class="chart-container">
+        <canvas id="main-graph"></canvas>
+      </div>
+    </div>
+
+    <!-- Secondary Chart -->
+    <div class="glass-card">
+      <h2 class="text-lg font-semibold mb-4" id="secondary-title">Deviation from Trend</h2>
+      <div class="chart-container">
+        <canvas id="secondary-graph"></canvas>
+      </div>
+    </div>
+
+    <!-- Simulation Chart (Placeholder) -->
+    <div class="glass-card">
+      <h2 class="text-lg font-semibold mb-4">Investment Simulation</h2>
+      <div class="chart-container">
+        <canvas id="sim-graph"></canvas>
+      </div>
+    </div>
+  </main>
 
 <script>
 /* ──────────────────────────────────────────────────────────
@@ -50,13 +156,37 @@ const HALVING_DATES = [
 let fullData = [];        // [{date:Date, price:Number}, …] – filled once
 let mainChart, secondaryChart, simChart;
 
-/*  THEME CONFIG – unchanged  */
-const lightTheme = {bg:'#f8f9fa',card:'#fff',text:'#212529',primary:'#0d6efd',
-  secondary:'#6c757d',success:'#198754',warning:'#ffc107',danger:'#dc3545',
-  info:'#0dcaf0',chartBg:'#fff',gridColor:'rgba(0,0,0,.1)',textColor:'#666'};
-const darkTheme  = {bg:'#121212',card:'#1e1e1e',text:'#e9ecef',primary:'#0d6efd',
-  secondary:'#6c757d',success:'#198754',warning:'#ffc107',danger:'#dc3545',
-  info:'#0dcaf0',chartBg:'#1e1e1e',gridColor:'rgba(255,255,255,.1)',textColor:'#AAA'};
+/*  THEME CONFIG  */
+const lightTheme = {
+  bg:'#f8f9fa',
+  card:'#fff',
+  text:'#212529',
+  primary:'#0d6efd',
+  secondary:'#6c757d',
+  success:'#198754',
+  warning:'#ffc107',
+  danger:'#dc3545',
+  info:'#0dcaf0',
+  chartBg:'#fff',
+  gridColor:'rgba(0,0,0,.1)',
+  textColor:'#666'
+};
+
+const darkTheme  = {
+  bg:'#121212',
+  card:'#1e1e1e',
+  text:'#e9ecef',
+  primary:'#0d6efd',
+  secondary:'#6c757d',
+  success:'#198754',
+  warning:'#ffc107',
+  danger:'#dc3545',
+  info:'#0dcaf0',
+  chartBg:'#1e1e1e',
+  gridColor:'rgba(255,255,255,.1)',
+  textColor:'#AAA'
+};
+
 const getCurrentTheme = () =>
   document.documentElement.classList.contains('dark') ? darkTheme : lightTheme;
 
@@ -87,8 +217,20 @@ function filterByDate(startISO, endISO) {
 function buildHalvingAnnotations(rangeDates) {
   const [start,end] = [rangeDates[0], rangeDates[rangeDates.length-1]];
   return HALVING_DATES.filter(d => d>=start && d<=end).map(d => ({
-    type:'line',scaleID:'x',value:d,borderColor:'#ff8c00',borderWidth:1,
-    label:{content:'Halving',enabled:true,position:'start',color:'#ff8c00'}
+    type:'line',
+    scaleID:'x',
+    value:d,
+    borderColor:'#ff8c00',
+    borderWidth:1,
+    borderDash: [5, 5],
+    label:{
+      content:'Halving',
+      enabled:true,
+      position:'start',
+      color:'#ff8c00',
+      backgroundColor: 'rgba(0,0,0,0.5)',
+      font: { size: 10 }
+    }
   }));
 }
 
@@ -99,46 +241,56 @@ function createChart(ctx, cfg){ return new Chart(ctx, cfg); }
    1.  INITIALISE EVERYTHING AFTER DOM LOAD
 ─────────────────────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', async () => {
-  /* Theme toggle (existing logic unchanged) */
+  /* Theme toggle */
   const themeToggle = document.getElementById('theme-toggle');
   const themeIcon   = document.getElementById('theme-icon');
   themeToggle.addEventListener('click', () => {
      document.documentElement.classList.toggle('dark');
      const icn = document.documentElement.classList.contains('dark')?'fa-moon':'fa-sun';
-     themeIcon.className='fas '+icn; localStorage.setItem('theme',icn==='fa-moon'?'dark':'light');
+     themeIcon.className='fas '+icn; 
+     localStorage.setItem('theme',icn==='fa-moon'?'dark':'light');
      repaintCharts();
   });
-  if(localStorage.getItem('theme')==='light'|| (window.matchMedia('(prefers-color-scheme: light)').matches&&!localStorage.getItem('theme'))){
-     document.documentElement.classList.remove('dark'); themeIcon.className='fas fa-sun';
+  
+  // Apply saved theme
+  if(localStorage.getItem('theme') === 'dark' || 
+     (window.matchMedia('(prefers-color-scheme: dark)').matches && 
+     !localStorage.getItem('theme'))) {
+     document.documentElement.classList.add('dark'); 
+     themeIcon.className='fas fa-moon';
+  } else {
+     document.documentElement.classList.remove('dark'); 
+     themeIcon.className='fas fa-sun';
   }
 
   /* Default date range: last year */
   const today  = new Date().toISOString().split('T')[0];
-  const yearAgo= new Date(); yearAgo.setFullYear(yearAgo.getFullYear()-1);
+  const yearAgo= new Date(); 
+  yearAgo.setFullYear(yearAgo.getFullYear()-1);
   const yearAgoStr = yearAgo.toISOString().split('T')[0];
-  document.getElementById('end-date').value=today;
-  document.getElementById('start-date').value=yearAgoStr;
+  
+  document.getElementById('end-date').value = today;
+  document.getElementById('start-date').value = yearAgoStr;
 
   /* Fetch dataset once */
-  try{
+  try {
      fullData = await fetchBTCData();
-  }catch(e){
-     alert("Could not load Bitcoin price data. See console.");
-     console.error(e);
+     buildCharts();
+  } catch(e) {
+     console.error("Error loading Bitcoin price data:", e);
+     alert("Could not load Bitcoin price data. See console for details.");
      return;
   }
 
-  /* Build charts */
-  buildCharts();
-
   /* Wire up UI interactions */
-  ['start-date','end-date','plot-type'].forEach(id =>
-     document.getElementById(id).addEventListener('change', updateCharts));
-  document.querySelectorAll('input[name="scale"]').forEach(el =>
-     el.addEventListener('change', updateCharts));
-
-  /* Investment-sim button keeps using the latest btcPrice (ticker) – left unchanged */
-  // (existing `run-sim` click handler could stay; you may adapt if needed)
+  ['start-date','end-date','plot-type'].forEach(id => {
+     const el = document.getElementById(id);
+     if(el) el.addEventListener('change', updateCharts);
+  });
+  
+  document.querySelectorAll('input[name="scale"]').forEach(el => {
+     el.addEventListener('change', updateCharts);
+  });
 });
 
 /* ──────────────────────────────────────────────────────────
@@ -148,60 +300,134 @@ function buildCharts(){
   const theme = getCurrentTheme();
   const {labels, prices} = sliceForCurrentRange();
 
-  /* MAIN */
+  /* MAIN CHART */
   const mainCtx = document.getElementById('main-graph').getContext('2d');
+  
+  if(mainChart) mainChart.destroy();
+  
   mainChart = createChart(mainCtx,{
     type:'line',
     data:{
-      labels, datasets:[{
-        label:'Bitcoin Price (USD)',data:prices,borderColor:theme.primary,
-        backgroundColor:'rgba(13,110,253,.1)',borderWidth:2,tension:.1,fill:true
+      labels, 
+      datasets:[{
+        label:'Bitcoin Price (USD)',
+        data:prices,
+        borderColor:theme.primary,
+        backgroundColor:'rgba(13,110,253,.1)',
+        borderWidth:2,
+        tension:0.1,
+        fill:true
       }]
     },
     options:{
-      responsive:true,maintainAspectRatio:false,
+      responsive:true,
+      maintainAspectRatio:false,
       plugins:{
         annotation:{annotations:buildHalvingAnnotations(labels)},
         legend:{display:false},
-        tooltip:{mode:'index',intersect:false,
-          callbacks:{label:c=>"Bitcoin: $"+c.raw.toLocaleString()}
+        tooltip:{
+          mode:'index',
+          intersect:false,
+          callbacks:{
+            label:ctx => "Bitcoin: $" + ctx.parsed.y.toLocaleString('en-US', {
+              maximumFractionDigits: 2
+            })
+          }
         }
       },
       scales:{
-        x:{type:'time',time:{unit:'month'},
-           grid:{color:theme.gridColor},ticks:{color:theme.textColor}},
-        y:{beginAtZero:false,
-           grid:{color:theme.gridColor},ticks:{color:theme.textColor,
-             callback:v=>'$'+v.toLocaleString()}}
+        x:{
+          type:'time',
+          time:{ unit:'month', tooltipFormat:'MMM yyyy' },
+          grid:{ color: theme.gridColor },
+          ticks:{ color: theme.textColor }
+        },
+        y:{
+          beginAtZero:false,
+          grid:{ color: theme.gridColor },
+          ticks:{
+            color: theme.textColor,
+            callback: value => '$' + value.toLocaleString('en-US', {
+              maximumFractionDigits: 2
+            })
+          }
+        }
       }
     }
   });
 
-  /* SECONDARY (Deviation initially) */
+  /* SECONDARY CHART */
   const secondaryCtx = document.getElementById('secondary-graph').getContext('2d');
-  const deviations = prices.map((p,i)=>((p-(30000+i*20))/(30000+i*20))*100);
+  
+  if(secondaryChart) secondaryChart.destroy();
+  
+  // Calculate deviation from a simple linear trend (for demo)
+  const deviations = prices.map((p,i) => {
+    const trend = 30000 + i * 20;
+    return ((p - trend) / trend) * 100;
+  });
+  
   secondaryChart = createChart(secondaryCtx,{
     type:'line',
-    data:{labels,
-      datasets:[{label:'Deviation from Trend (%)',data:deviations,
-        borderColor:theme.warning,backgroundColor:'rgba(255,193,7,.1)',borderWidth:2,
-        tension:.1,fill:true}]},
+    data:{
+      labels,
+      datasets:[{
+        label:'Deviation from Trend (%)',
+        data:deviations,
+        borderColor:theme.warning,
+        backgroundColor:'rgba(255,193,7,.1)',
+        borderWidth:2,
+        tension:0.1,
+        fill:true
+      }]
+    },
     options:{
-      responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,
-        callbacks:{label:c=>c.dataset.label+': '+c.raw.toFixed(2)+'%'}}},
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          mode:'index',
+          intersect:false,
+          callbacks:{
+            label:ctx => ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(2) + '%'
+          }
+        }
+      },
       scales:{
-        x:{type:'time',time:{unit:'month'},grid:{color:theme.gridColor},
-           ticks:{color:theme.textColor}},
-        y:{beginAtZero:true,grid:{color:theme.gridColor},
-           ticks:{color:theme.textColor,callback:v=>v+'%'}}
+        x:{
+          type:'time',
+          time:{ unit:'month', tooltipFormat:'MMM yyyy' },
+          grid:{ color: theme.gridColor },
+          ticks:{ color: theme.textColor }
+        },
+        y:{
+          beginAtZero:true,
+          grid:{ color: theme.gridColor },
+          ticks:{
+            color: theme.textColor,
+            callback: value => value.toFixed(0) + '%'
+          }
+        }
       }
     }
   });
 
-  /* SIM chart keeps demo data – you can replace similarly */
-  simChart = new Chart(document.getElementById('sim-graph'),{
-    type:'line',data:{labels, datasets:[/* ... same as before ... */]},options:{/* ... */}
+  /* SIMULATION CHART - Placeholder */
+  const simCtx = document.getElementById('sim-graph').getContext('2d');
+  
+  if(simChart) simChart.destroy();
+  
+  simChart = createChart(simCtx,{
+    type:'line',
+    data:{
+      labels: [],
+      datasets: []
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false
+    }
   });
 }
 
@@ -209,30 +435,45 @@ function buildCharts(){
 function sliceForCurrentRange(){
   const s = document.getElementById('start-date').value;
   const e = document.getElementById('end-date').value;
+  
+  if(!s || !e) {
+    console.error("Date range not set");
+    return { labels: [], prices: [] };
+  }
+  
   const range = filterByDate(s,e);
   return {
-    labels: range.map(d=>d.date),
-    prices: range.map(d=>d.price)
+    labels: range.map(d => d.date),
+    prices: range.map(d => d.price)
   };
 }
 
 /* Re-paint / update theme colors when toggling dark–light */
 function repaintCharts(){
   const theme = getCurrentTheme();
-  [mainChart,secondaryChart,simChart].forEach(ch=>{
+  [mainChart, secondaryChart, simChart].forEach(ch => {
     if(!ch) return;
+    
+    // Update scales
     ch.options.scales.x.grid.color = theme.gridColor;
-    ch.options.scales.y.grid.color = theme.gridColor;
-    ch.options.scales.x.ticks.color= theme.textColor;
-    ch.options.scales.y.ticks.color= theme.textColor;
-    if(ch === mainChart){
-      ch.data.datasets[0].borderColor = theme.primary;
-      ch.options.plugins.annotation.annotations =
-        buildHalvingAnnotations(ch.data.labels);
-    }else if(ch===secondaryChart){
-      ch.data.datasets[0].borderColor = theme.warning;
-      ch.data.datasets[0].backgroundColor='rgba(255,193,7,.1)';
+    if (ch.options.scales.y) {
+      ch.options.scales.y.grid.color = theme.gridColor;
+      ch.options.scales.y.ticks.color = theme.textColor;
     }
+    ch.options.scales.x.ticks.color = theme.textColor;
+    
+    // Update datasets
+    if(ch === mainChart && ch.data.datasets[0]){
+      ch.data.datasets[0].borderColor = theme.primary;
+      ch.data.datasets[0].backgroundColor = 'rgba(13,110,253,.1)';
+      ch.options.plugins.annotation.annotations = 
+        buildHalvingAnnotations(ch.data.labels);
+    }
+    else if(ch === secondaryChart && ch.data.datasets[0]){
+      ch.data.datasets[0].borderColor = theme.warning;
+      ch.data.datasets[0].backgroundColor = 'rgba(255,193,7,.1)';
+    }
+    
     ch.update();
   });
 }
@@ -240,49 +481,71 @@ function repaintCharts(){
 /* Called whenever date range / plot type / scale changes */
 function updateCharts(){
   const plotType = document.getElementById('plot-type').value;
-  const scaleType= document.querySelector('input[name="scale"]:checked').value;
-  const theme    = getCurrentTheme();
+  const scaleType = document.querySelector('input[name="scale"]:checked').value;
+  const theme = getCurrentTheme();
   const {labels, prices} = sliceForCurrentRange();
+  
+  // Update secondary chart title
+  const secondaryTitle = document.getElementById('secondary-title');
+  if(secondaryTitle) {
+    if(plotType === 'deviation') secondaryTitle.textContent = 'Deviation from Trend';
+    else if(plotType === '4yr') secondaryTitle.textContent = '4-Year Moving Average';
+    else secondaryTitle.textContent = 'Historical Price';
+  }
 
   /* MAIN series update */
-  mainChart.data.labels = labels;
-  mainChart.data.datasets[0].data = prices;
-  mainChart.options.scales.y.type = (scaleType==='log-log')?'logarithmic':'linear';
-  mainChart.options.plugins.annotation.annotations =
+  if(mainChart && labels.length && prices.length) {
+    mainChart.data.labels = labels;
+    mainChart.data.datasets[0].data = prices;
+    mainChart.options.scales.y.type = (scaleType === 'log-log') ? 'logarithmic' : 'linear';
+    mainChart.options.plugins.annotation.annotations = 
       buildHalvingAnnotations(labels);
-
-  /* SECONDARY varies by plot type */
-  let secondaryData, secondaryLabel, bg, border;
-  if(plotType==='deviation' || plotType==='log'){
-    secondaryLabel='Deviation from Trend (%)';
-    secondaryData = prices.map((p,i)=>{
-      const trend = 30000 + i*20;
-      return ((p-trend)/trend)*100;
-    });
-    bg='rgba(255,193,7,.1)'; border=theme.warning;
-    secondaryChart.options.scales.y.ticks.callback=v=>v+'%';
-  }else if(plotType==='4yr'){
-    secondaryLabel='4-Year Moving Average';
-    secondaryData = prices.map((_,i)=>{
-      const from = Math.max(0,i-365*4);
-      const slice = prices.slice(from,i+1);
-      return slice.reduce((a,b)=>a+b,0)/slice.length;
-    });
-    bg='rgba(25,135,84,.1)'; border=theme.success;
-    secondaryChart.options.scales.y.ticks.callback=v=>'$'+v.toLocaleString();
-  }else{ /* default: show raw price again */
-    secondaryLabel='Historical Price';
-    secondaryData = prices; bg='rgba(13,110,253,.1)'; border=theme.primary;
-    secondaryChart.options.scales.y.ticks.callback=v=>'$'+v.toLocaleString();
+    mainChart.update();
   }
-  secondaryChart.data.labels = labels;
-  Object.assign(secondaryChart.data.datasets[0],{
-    label:secondaryLabel,data:secondaryData,
-    backgroundColor:bg,borderColor:border
-  });
 
-  /* Update & redraw */
-  mainChart.update(); secondaryChart.update();
+  /* SECONDARY chart update */
+  if(secondaryChart && labels.length && prices.length) {
+    let secondaryData, secondaryLabel, border, background;
+    
+    if(plotType === 'deviation') {
+      secondaryLabel = 'Deviation from Trend (%)';
+      secondaryData = prices.map((p,i) => {
+        const trend = 30000 + i * 20;
+        return ((p - trend) / trend) * 100;
+      });
+      border = theme.warning;
+      background = 'rgba(255,193,7,.1)';
+    } 
+    else if(plotType === '4yr') {
+      secondaryLabel = '4-Year Moving Average';
+      secondaryData = prices.map((_,i) => {
+        const from = Math.max(0, i - 365 * 4);
+        const slice = prices.slice(from, i + 1);
+        return slice.reduce((a,b) => a + b, 0) / slice.length;
+      });
+      border = theme.success;
+      background = 'rgba(25,135,84,.1)';
+    } 
+    else {
+      secondaryLabel = 'Historical Price';
+      secondaryData = prices;
+      border = theme.primary;
+      background = 'rgba(13,110,253,.1)';
+    }
+    
+    secondaryChart.data.labels = labels;
+    secondaryChart.data.datasets[0] = {
+      label: secondaryLabel,
+      data: secondaryData,
+      borderColor: border,
+      backgroundColor: background,
+      borderWidth: 2,
+      tension: 0.1,
+      fill: true
+    };
+    
+    secondaryChart.update();
+  }
 }
 </script>
 </body>
