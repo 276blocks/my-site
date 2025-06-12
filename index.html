@@ -9,11 +9,899 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/luxon@3.0.1"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1.2.0"></script>
-    
-    <link rel="stylesheet" href="style.css">
+    <style>
+        .glass-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+        .dark .glass-card {
+            background: rgba(30, 30, 30, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .chart-container {
+            position: relative;
+            height: 400px;
+        }
+        .spinner {
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .btn-group input[type="radio"]:checked + label {
+            background-color: #3b82f6;
+            color: white;
+        }
+    </style>
 </head>
 <body class="bg-gray-100 dark:bg-gray-900 transition-colors duration-200">
-    <!-- ... truncated ... -->
-    <script src="script.js"></script>
+    <!-- Navbar -->
+    <nav class="bg-blue-600 dark:bg-blue-800 text-white shadow-md mb-6">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/4/46/Bitcoin.svg" alt="Bitcoin Logo" class="h-8 w-8 mr-2">
+                    <span class="text-xl font-semibold">Bitcoin Analytics Dashboard</span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button id="theme-toggle" class="p-2 rounded-full hover:bg-blue-500 dark:hover:bg-blue-700">
+                        <i id="theme-icon" class="fas fa-moon"></i>
+                    </button>
+                    <div class="relative group">
+                        <button class="px-4 py-2 rounded-md hover:bg-blue-500 dark:hover:bg-blue-700">
+                            <i class="fas fa-question-circle mr-2"></i>Help
+                        </button>
+                        <div class="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg z-20 hidden group-hover:block">
+                            <a href="#" class="block px-4 py-2 text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">Documentation</a>
+                            <a href="#" class="block px-4 py-2 text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">GitHub</a>
+                            <a href="#" class="block px-4 py-2 text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">About</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex flex-col lg:flex-row gap-6">
+            <!-- Sidebar -->
+            <div class="w-full lg:w-1/4">
+                <div class="glass-card p-6 mb-6">
+                    <div class="flex justify-center mb-6">
+                        <img src="https://assets3.lottiefiles.com/packages/lf20_jcikwtux.json" alt="Bitcoin Animation" class="h-20 w-auto">
+                    </div>
+                    <h2 class="text-xl font-semibold text-center mb-6 text-gray-800 dark:text-white">Controls</h2>
+                    
+                    <!-- Date Range Picker -->
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date Range</label>
+                        <div class="flex flex-col sm:flex-row gap-2">
+                            <input type="date" id="start-date" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-800 dark:text-white">
+                            <input type="date" id="end-date" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-800 dark:text-white">
+                        </div>
+                    </div>
+                    
+                    <!-- Theme and Scale Selectors -->
+                    <div class="grid grid-cols-2 gap-4 mb-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Theme</label>
+                            <div class="btn-group inline-flex rounded-md shadow-sm">
+                                <input type="radio" name="theme" id="light-theme" value="light" class="hidden peer">
+                                <label for="light-theme" class="px-4 py-2 text-sm font-medium border border-gray-300 dark:border-gray-600 rounded-l-md cursor-pointer peer-checked:bg-blue-600 peer-checked:text-white">
+                                    <i class="fas fa-sun mr-2"></i>Light
+                                </label>
+                                <input type="radio" name="theme" id="dark-theme" value="dark" class="hidden peer" checked>
+                                <label for="dark-theme" class="px-4 py-2 text-sm font-medium border border-gray-300 dark:border-gray-600 rounded-r-md cursor-pointer peer-checked:bg-blue-600 peer-checked:text-white">
+                                    <i class="fas fa-moon mr-2"></i>Dark
+                                </label>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Scale</label>
+                            <div class="btn-group inline-flex rounded-md shadow-sm">
+                                <input type="radio" name="scale" id="log-log" value="log-log" class="hidden peer" checked>
+                                <label for="log-log" class="px-4 py-2 text-sm font-medium border border-gray-300 dark:border-gray-600 rounded-l-md cursor-pointer peer-checked:bg-blue-600 peer-checked:text-white">Log-Log</label>
+                                <input type="radio" name="scale" id="log-linear" value="log-linear" class="hidden peer">
+                                <label for="log-linear" class="px-4 py-2 text-sm font-medium border border-gray-300 dark:border-gray-600 rounded-r-md cursor-pointer peer-checked:bg-blue-600 peer-checked:text-white">Log-Linear</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Analysis Type Selector -->
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Analysis Type</label>
+                        <select id="plot-type" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md bg-white dark:bg-gray-800 text-gray-800 dark:text-white">
+                            <option value="log">Log-Log Regression</option>
+                            <option value="4yr">4-Year Average</option>
+                            <option value="weinstein">Weinstein Stage Analysis</option>
+                            <option value="deviation">Deviation Analysis</option>
+                            <option value="spiral">Price Spiral</option>
+                            <option value="mayer">Mayer Multiple</option>
+                            <option value="returns">Daily Returns</option>
+                            <option value="required">Required Returns</option>
+                            <option value="seasonality">Seasonality</option>
+                            <option value="regression">Regression Quality</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Investment Calculator -->
+                    <h2 class="text-xl font-semibold text-center mb-4 text-gray-800 dark:text-white">Investment Calculator</h2>
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">BTC Amount</label>
+                            <div class="relative rounded-md shadow-sm">
+                                <input type="number" id="btc-amt" value="1" min="0" step="0.1" class="focus:ring-blue-500 focus:border-blue-500 block w-full pl-3 pr-12 py-2 sm:text-sm border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-800 dark:text-white">
+                                <div class="absolute inset-y-0 right-0 flex items-center">
+                                    <label for="btc-amt" class="sr-only">BTC</label>
+                                    <div class="h-full py-0 pl-2 pr-3 border-l border-gray-300 dark:border-gray-600 flex items-center text-gray-700 dark:text-gray-300 bg-transparent sm:text-sm">
+                                        BTC
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Years Ahead</label>
+                            <input type="number" id="years-future" value="1" min="0.1" step="0.1" class="focus:ring-blue-500 focus:border-blue-500 block w-full pl-3 pr-3 py-2 sm:text-sm border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-800 dark:text-white">
+                        </div>
+                    </div>
+                    <button id="run-sim" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md mb-6 transition duration-150 ease-in-out">
+                        <i class="fas fa-calculator mr-2"></i>Calculate Projection
+                    </button>
+                    
+                    <!-- Prediction Results -->
+                    <div id="prediction-results" class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                        <h3 class="font-semibold text-lg mb-3 text-gray-800 dark:text-white border-b pb-2">Projection Results</h3>
+                        <div class="space-y-3">
+                            <div class="flex justify-between">
+                                <span class="font-medium text-gray-700 dark:text-gray-300">Current Value</span>
+                                <span class="font-medium">$--</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="font-medium text-gray-700 dark:text-gray-300">Future Value</span>
+                                <span class="font-medium text-green-500">$--</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="font-medium text-gray-700 dark:text-gray-300">Annual Growth</span>
+                                <span class="font-medium text-green-500">$--</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="font-medium text-gray-700 dark:text-gray-300">Model Accuracy (R²)</span>
+                                <span class="font-medium text-blue-500">0.0000</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Current Price Ticker -->
+                    <div id="current-price-ticker" class="mt-6 p-4 bg-blue-50 dark:bg-blue-900 rounded-lg text-center">
+                        <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Current Bitcoin Price</h4>
+                        <div class="flex justify-center items-baseline">
+                            <span class="text-2xl font-bold text-gray-800 dark:text-white">$--</span>
+                            <span id="price-change" class="ml-2 text-sm flex items-center"><i class="fas fa-arrow-up mr-1 text-green-500 hidden"></i>0.00%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Main Content Area -->
+            <div class="w-full lg:w-3/4">
+                <!-- Metrics Cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                    <!-- Current Price Card -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 text-center">
+                        <i class="fas fa-coins text-2xl mb-2 text-yellow-500"></i>
+                        <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Current Price</h3>
+                        <div class="flex items-center justify-center">
+                            <p class="text-xl font-semibold text-gray-800 dark:text-white">$--</p>
+                            <p id="current-price-change" class="ml-2 text-xs flex items-center">
+                                <i class="fas fa-arrow-up text-green-500 hidden"></i>
+                                <i class="fas fa-arrow-down text-red-500 hidden"></i>
+                                0.00%
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <!-- Market Cap Card -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 text-center">
+                        <i class="fas fa-globe text-2xl mb-2 text-blue-500"></i>
+                        <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Market Cap</h3>
+                        <div class="flex items-center justify-center">
+                            <p class="text-xl font-semibold text-gray-800 dark:text-white">$--</p>
+                            <p id="market-cap-change" class="ml-2 text-xs flex items-center">
+                                <i class="fas fa-arrow-up text-green-500 hidden"></i>
+                                <i class="fas fa-arrow-down text-red-500 hidden"></i>
+                                0.00%
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <!-- 24h Volume Card -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 text-center">
+                        <i class="fas fa-chart-bar text-2xl mb-2 text-green-500"></i>
+                        <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">24h Volume</h3>
+                        <div class="flex items-center justify-center">
+                            <p class="text-xl font-semibold text-gray-800 dark:text-white">$--</p>
+                            <p id="volume-change" class="ml-2 text-xs flex items-center">
+                                <i class="fas fa-arrow-up text-green-500 hidden"></i>
+                                <i class="fas fa-arrow-down text-red-500 hidden"></i>
+                                0.00%
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <!-- Fear & Greed Card -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 text-center">
+                        <i class="fas fa-gauge-high text-2xl mb-2 text-red-500"></i>
+                        <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fear & Greed</h3>
+                        <div class="flex items-center justify-center">
+                            <p class="text-xl font-semibold text-gray-800 dark:text-white">--</p>
+                            <p id="fear-greed-change" class="ml-2 text-xs flex items-center">
+                                <i class="fas fa-arrow-up text-green-500 hidden"></i>
+                                <i class="fas fa-arrow-down text-red-500 hidden"></i>
+                                0
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Main Graph -->
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-lg font-semibold text-gray-800 dark:text-white" id="main-graph-title">Bitcoin Price Analysis</h2>
+                        <div id="main-graph-loading" class="hidden">
+                            <i class="fas fa-spinner spinner text-blue-500 mr-2"></i>
+                            <span class="text-sm text-gray-600 dark:text-gray-300">Loading...</span>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="main-graph"></canvas>
+                    </div>
+                </div>
+                
+                <!-- Secondary Graph -->
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-lg font-semibold text-gray-800 dark:text-white" id="secondary-graph-title">Complementary Analysis</h2>
+                        <div id="secondary-graph-loading" class="hidden">
+                            <i class="fas fa-spinner spinner text-blue-500 mr-2"></i>
+                            <span class="text-sm text-gray-600 dark:text-gray-300">Loading...</span>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="secondary-graph"></canvas>
+                    </div>
+                </div>
+                
+                <!-- Monte Carlo Simulation -->
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-lg font-semibold text-gray-800 dark:text-white" id="sim-graph-title">Monte Carlo Simulation</h2>
+                        <div id="sim-graph-loading" class="hidden">
+                            <i class="fas fa-spinner spinner text-blue-500 mr-2"></i>
+                            <span class="text-sm text-gray-600 dark:text-gray-300">Loading...</span>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="sim-graph"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Theme toggle functionality
+        const themeToggle = document.getElementById('theme-toggle');
+        const themeIcon = document.getElementById('theme-icon');
+        
+        themeToggle.addEventListener('click', () => {
+            document.documentElement.classList.toggle('dark');
+            if (document.documentElement.classList.contains('dark')) {
+                localStorage.setItem('theme', 'dark');
+                themeIcon.className = 'fas fa-moon';
+            } else {
+                localStorage.setItem('theme', 'light');
+                themeIcon.className = 'fas fa-sun';
+            }
+            updateChartThemes();
+        });
+
+        // Check for saved theme preference
+        if (localStorage.getItem('theme') === 'light' || 
+            (window.matchMedia('(prefers-color-scheme: light)').matches && !localStorage.getItem('theme'))) {
+            document.documentElement.classList.remove('dark');
+            themeIcon.className = 'fas fa-sun';
+        }
+
+        // Set default dates
+        const today = new Date().toISOString().split('T')[0];
+        const oneYearAgo = new Date();
+        oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+        const oneYearAgoStr = oneYearAgo.toISOString().split('T')[0];
+        
+        document.getElementById('end-date').value = today;
+        document.getElementById('start-date').value = oneYearAgoStr;
+
+        // Chart instances
+        let mainChart, secondaryChart, simChart;
+        
+        // Color schemes
+        const lightTheme = {
+            bg: '#f8f9fa',
+            card: '#ffffff',
+            text: '#212529',
+            primary: '#0d6efd',
+            secondary: '#6c757d',
+            success: '#198754',
+            warning: '#ffc107',
+            danger: '#dc3545',
+            info: '#0dcaf0',
+            chartBg: '#ffffff',
+            gridColor: 'rgba(0, 0, 0, 0.1)',
+            textColor: '#666'
+        };
+
+        const darkTheme = {
+            bg: '#121212',
+            card: '#1e1e1e',
+            text: '#e9ecef',
+            primary: '#0d6efd',
+            secondary: '#6c757d',
+            success: '#198754',
+            warning: '#ffc107',
+            danger: '#dc3545',
+            info: '#0dcaf0',
+            chartBg: '#1e1e1e',
+            gridColor: 'rgba(255, 255, 255, 0.1)',
+            textColor: '#AAA'
+        };
+
+        function getCurrentTheme() {
+            return document.documentElement.classList.contains('dark') ? darkTheme : lightTheme;
+        }
+
+        function updateChartThemes() {
+            const theme = getCurrentTheme();
+            
+            if (mainChart) {
+                mainChart.options.scales.x.grid.color = theme.gridColor;
+                mainChart.options.scales.y.grid.color = theme.gridColor;
+                mainChart.options.scales.x.ticks.color = theme.textColor;
+                mainChart.options.scales.y.ticks.color = theme.textColor;
+                mainChart.update();
+            }
+            
+            if (secondaryChart) {
+                secondaryChart.options.scales.x.grid.color = theme.gridColor;
+                secondaryChart.options.scales.y.grid.color = theme.gridColor;
+                secondaryChart.options.scales.x.ticks.color = theme.textColor;
+                secondaryChart.options.scales.y.ticks.color = theme.textColor;
+                secondaryChart.update();
+            }
+            
+            if (simChart) {
+                simChart.options.scales.x.grid.color = theme.gridColor;
+                simChart.options.scales.y.grid.color = theme.gridColor;
+                simChart.options.scales.x.ticks.color = theme.textColor;
+                simChart.options.scales.y.ticks.color = theme.textColor;
+                simChart.update();
+            }
+        }
+
+        // Simulate price data (in a real app, you'd fetch this from an API)
+        function generatePriceData(startDate, endDate) {
+            const dates = [];
+            const prices = [];
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+            
+            let currentPrice = 30000;
+            let currentDate = new Date(start);
+            
+            for (let i = 0; i <= days; i++) {
+                dates.push(new Date(currentDate));
+                
+                // Simulate price movement with random walk and upward trend
+                const randomChange = (Math.random() - 0.4) * 1000;
+                currentPrice = Math.max(1000, currentPrice + randomChange + (i * 5));
+                
+                prices.push(currentPrice);
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+            
+            return { dates, prices };
+        }
+
+        // Create chart helper function
+        function createChart(ctx, type, data, options) {
+            return new Chart(ctx, {
+                type: type,
+                data: data,
+                options: options
+            });
+        }
+
+        // Initialize charts with sample data
+        function initCharts() {
+            const { dates, prices } = generatePriceData(oneYearAgoStr, today);
+            const theme = getCurrentTheme();
+            
+            // Main Chart
+            const mainCtx = document.getElementById('main-graph').getContext('2d');
+            mainChart = createChart(mainCtx, 'line', {
+                labels: dates,
+                datasets: [{
+                    label: 'Bitcoin Price (USD)',
+                    data: prices,
+                    borderColor: theme.primary,
+                    backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.1,
+                    fill: true
+                }]
+            }, {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': $' + context.raw.toLocaleString();
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: {
+                            unit: 'month'
+                        },
+                        grid: {
+                            color: theme.gridColor
+                        },
+                        ticks: {
+                            color: theme.textColor
+                        }
+                    },
+                    y: {
+                        beginAtZero: false,
+                        grid: {
+                            color: theme.gridColor
+                        },
+                        ticks: {
+                            color: theme.textColor,
+                            callback: function(value) {
+                                return '$' + value.toLocaleString();
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Secondary Chart (Deviation from trend)
+            const deviations = prices.map((price, i) => {
+                const trendPrice = 30000 + (i * 20);
+                return ((price - trendPrice) / trendPrice) * 100;
+            });
+            
+            const secondaryCtx = document.getElementById('secondary-graph').getContext('2d');
+            secondaryChart = createChart(secondaryCtx, 'line', {
+                labels: dates,
+                datasets: [{
+                    label: 'Deviation from Trend (%)',
+                    data: deviations,
+                    borderColor: theme.warning,
+                    backgroundColor: 'rgba(255, 193, 7, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.1,
+                    fill: true
+                }]
+            }, {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': ' + context.raw.toFixed(2) + '%';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: {
+                            unit: 'month'
+                        },
+                        grid: {
+                            color: theme.gridColor
+                        },
+                        ticks: {
+                            color: theme.textColor
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: theme.gridColor
+                        },
+                        ticks: {
+                            color: theme.textColor,
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Simulation Chart
+            const simCtx = document.getElementById('sim-graph').getContext('2d');
+            simChart = createChart(simCtx, 'line', {
+                labels: dates,
+                datasets: [{
+                    label: 'Median Projection',
+                    data: prices.map(p => p * 1.2),
+                    borderColor: theme.warning,
+                    backgroundColor: 'rgba(255, 193, 7, 0.1)',
+                    borderWidth: 3,
+                    tension: 0.1,
+                    fill: false
+                },
+                {
+                    label: '80% Confidence Range',
+                    data: prices.map(p => p * 1.5),
+                    borderColor: theme.success,
+                    backgroundColor: 'rgba(25, 135, 84, 0.1)',
+                    borderWidth: 1,
+                    tension: 0.1,
+                    fill: '-1',
+                    pointRadius: 0
+                },
+                {
+                    label: '80% Confidence Range',
+                    data: prices.map(p => p * 0.9),
+                    borderColor: theme.success,
+                    backgroundColor: 'rgba(25, 135, 84, 0.1)',
+                    borderWidth: 1,
+                    tension: 0.1,
+                    fill: false,
+                    pointRadius: 0
+                }]
+            }, {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top'
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': $' + context.raw.toLocaleString();
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: {
+                            unit: 'month'
+                        },
+                        grid: {
+                            color: theme.gridColor
+                        },
+                        ticks: {
+                            color: theme.textColor
+                        }
+                    },
+                    y: {
+                        beginAtZero: false,
+                        grid: {
+                            color: theme.gridColor
+                        },
+                        ticks: {
+                            color: theme.textColor,
+                            callback: function(value) {
+                                return '$' + value.toLocaleString();
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Initialize charts when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            initCharts();
+            
+            // Simulate price updates
+            let btcPrice = 30000;
+            setInterval(() => {
+                btcPrice += (Math.random() - 0.5) * 500;
+                btcPrice = Math.max(10000, btcPrice);
+                
+                // Update price ticker
+                const priceElement = document.querySelector('#current-price-ticker > div > span.text-2xl');
+                if (priceElement) {
+                    priceElement.textContent = '$' + btcPrice.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                }
+                
+                // Update current price card
+                const priceChange = (Math.random() - 0.5) * 2;
+                const currentPriceElement = document.querySelector('#current-price-card p');
+                if (currentPriceElement) {
+                    currentPriceElement.textContent = '$' + btcPrice.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                    
+                    const changeElement = document.getElementById('current-price-change');
+                    const arrowUp = changeElement.querySelector('.fa-arrow-up');
+                    const arrowDown = changeElement.querySelector('.fa-arrow-down');
+                    
+                    if (priceChange >= 0) {
+                        arrowUp.classList.remove('hidden');
+                        arrowDown.classList.add('hidden');
+                        changeElement.classList.remove('text-red-500');
+                        changeElement.classList.add('text-green-500');
+                    } else {
+                        arrowUp.classList.add('hidden');
+                        arrowDown.classList.remove('hidden');
+                        changeElement.classList.remove('text-green-500');
+                        changeElement.classList.add('text-red-500');
+                    }
+                    
+                    changeElement.textContent = Math.abs(priceChange).toFixed(2) + '%';
+                }
+                
+                // Update market cap (simplified calculation)
+                const marketCap = btcPrice * 19500000;
+                const marketCapElement = document.querySelector('#market-cap-card p');
+                if (marketCapElement) {
+                    marketCapElement.textContent = '$' + Math.floor(marketCap / 1000000000) + 'B';
+                }
+                
+                // Update 24h volume
+                const volume = 25000000000 + (Math.random() - 0.5) * 10000000000;
+                const volumeElement = document.querySelector('#volume-card p');
+                if (volumeElement) {
+                    volumeElement.textContent = '$' + Math.floor(volume / 1000000000) + 'B';
+                }
+                
+                // Update Fear & Greed
+                const fearGreed = Math.floor(30 + Math.random() * 50);
+                const fearGreedElement = document.querySelector('#fear-greed-card p');
+                if (fearGreedElement) {
+                    fearGreedElement.textContent = fearGreed;
+                    if (fearGreed < 25) {
+                        fearGreedElement.classList.add('text-yellow-500');
+                        fearGreedElement.classList.remove('text-green-500', 'text-red-500');
+                    } else if (fearGreed < 75) {
+                        fearGreedElement.classList.add('text-green-500');
+                        fearGreedElement.classList.remove('text-yellow-500', 'text-red-500');
+                    } else {
+                        fearGreedElement.classList.add('text-red-500');
+                        fearGreedElement.classList.remove('text-green-500', 'text-yellow-500');
+                    }
+                }
+            }, 3000);
+            
+            // Update charts when date range changes
+            document.getElementById('start-date').addEventListener('change', updateCharts);
+            document.getElementById('end-date').addEventListener('change', updateCharts);
+            
+            // Update charts when analysis type changes
+            document.getElementById('plot-type').addEventListener('change', updateCharts);
+            
+            // Update charts when scale changes
+            document.querySelectorAll('input[name="scale"]').forEach(input => {
+                input.addEventListener('change', updateCharts);
+            });
+            
+            // Run simulation when button is clicked
+            document.getElementById('run-sim').addEventListener('click', () => {
+                const btcAmt = parseFloat(document.getElementById('btc-amt').value) || 1;
+                const years = parseFloat(document.getElementById('years-future').value) || 1;
+                
+                // Show loading state
+                document.getElementById('sim-graph-loading').classList.remove('hidden');
+                
+                // Simulate API call
+                setTimeout(() => {
+                    // Update prediction results
+                    const currentValue = (btcPrice * btcAmt).toLocaleString('en-US', {style: 'currency', currency: 'USD'});
+                    const futureValue = (btcPrice * btcAmt * (1 + years * 0.3)).toLocaleString('en-US', {style: 'currency', currency: 'USD'});
+                    const annualGrowth = (btcPrice * btcAmt * 0.3).toLocaleString('en-US', {style: 'currency', currency: 'USD'});
+                    
+                    document.getElementById('prediction-results').innerHTML = `
+                        <h3 class="font-semibold text-lg mb-3 text-gray-800 dark:text-white border-b pb-2">Projection Results</h3>
+                        <div class="space-y-3">
+                            <div class="flex justify-between">
+                                <span class="font-medium text-gray-700 dark:text-gray-300">Current Value</span>
+                                <span class="font-medium">${currentValue}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="font-medium text-gray-700 dark:text-gray-300">${years}-Year Projection</span>
+                                <span class="font-medium text-green-500">${futureValue}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="font-medium text-gray-700 dark:text-gray-300">Annual Growth</span>
+                                <span class="font-medium text-green-500">${annualGrowth}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="font-medium text-gray-700 dark:text-gray-300">Model Accuracy (R²)</span>
+                                <span class="font-medium text-blue-500">${(0.9 + Math.random() * 0.09).toFixed(4)}</span>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Update simulation chart with more paths
+                    const endDate = new Date();
+                    endDate.setFullYear(endDate.getFullYear() + years);
+                    const { dates: simDates, prices: simPrices } = generatePriceData(today, endDate.toISOString().split('T')[0]);
+                    
+                    simChart.data.labels = simDates;
+                    simChart.data.datasets[0].data = simPrices.map(p => p * btcAmt);
+                    simChart.data.datasets[1].data = simPrices.map(p => p * 1.15 * btcAmt);
+                    simChart.data.datasets[2].data = simPrices.map(p => p * 0.85 * btcAmt);
+                    simChart.update();
+                    
+                    document.getElementById('sim-graph-loading').classList.add('hidden');
+                }, 1000);
+            });
+        });
+        
+        // Update charts based on current settings
+        function updateCharts() {
+            const startDate = document.getElementById('start-date').value;
+            const endDate = document.getElementById('end-date').value;
+            const plotType = document.getElementById('plot-type').value;
+            const scaleType = document.querySelector('input[name="scale"]:checked').value;
+            
+            // Show loading states
+            document.getElementById('main-graph-loading').classList.remove('hidden');
+            document.getElementById('secondary-graph-loading').classList.remove('hidden');
+            
+            // In a real app, you would fetch new data from an API here
+            setTimeout(() => {
+                const { dates, prices } = generatePriceData(startDate, endDate);
+                
+                // Update main chart based on plot type
+                let mainTitle = 'Bitcoin Price Analysis';
+                switch (plotType) {
+                    case 'log':
+                        mainTitle = 'Bitcoin Log-Log Regression';
+                        break;
+                    case '4yr':
+                        mainTitle = '4-Year Average Price';
+                        break;
+                    case 'weinstein':
+                        mainTitle = 'Weinstein Stage Analysis';
+                        break;
+                    case 'deviation':
+                        mainTitle = 'Deviation from Trend';
+                        break;
+                    case 'spiral':
+                        mainTitle = 'Bitcoin Price Spiral';
+                        break;
+                    case 'mayer':
+                        mainTitle = 'Mayer Multiple';
+                        break;
+                    case 'returns':
+                        mainTitle = 'Daily Returns Analysis';
+                        break;
+                    case 'required':
+                        mainTitle = 'Required Returns to Targets';
+                        break;
+                    case 'seasonality':
+                        mainTitle = 'Seasonality Analysis';
+                        break;
+                    case 'regression':
+                        mainTitle = 'Regression Quality Metrics';
+                        break;
+                }
+                
+                document.getElementById('main-graph-title').textContent = mainTitle;
+                
+                // Update secondary chart with complementary analysis
+                let secondaryTitle = 'Complementary Analysis';
+                switch (plotType) {
+                    case 'log':
+                        secondaryTitle = 'Deviation from Trend';
+                        break;
+                    case '4yr':
+                        secondaryTitle = 'Log-Log Regression';
+                        break;
+                    default:
+                        secondaryTitle = 'Historical Price';
+                }
+                
+                document.getElementById('secondary-graph-title').textContent = secondaryTitle;
+                
+                // Update charts with new data
+                const theme = getCurrentTheme();
+                
+                mainChart.data.labels = dates;
+                mainChart.data.datasets[0].data = prices;
+                
+                if (scaleType === 'log-log') {
+                    mainChart.options.scales.y.type = 'logarithmic';
+                } else {
+                    mainChart.options.scales.y.type = 'linear';
+                }
+                
+                mainChart.update();
+                
+                // Update secondary chart with appropriate data for the plot type
+                let secondaryData;
+                switch (plotType) {
+                    case 'log':
+                        secondaryData = prices.map((price, i) => {
+                            const trendPrice = 30000 + (i * 20);
+                            return ((price - trendPrice) / trendPrice) * 100;
+                        });
+                        break;
+                    case '4yr':
+                        // 4-year moving average simulation
+                        const fourYearAvg = [];
+                        for (let i = 0; i < prices.length; i++) {
+                            const startIdx = Math.max(0, i - 365 * 4);
+                            const avg = prices.slice(startIdx, i + 1).reduce((a, b) => a + b, 0) / (i - startIdx + 1);
+                            fourYearAvg.push(avg);
+                        }
+                        secondaryData = fourYearAvg;
+                        break;
+                    default:
+                        secondaryData = prices;
+                }
+                
+                secondaryChart.data.labels = dates;
+                secondaryChart.data.datasets[0].data = secondaryData;
+                
+                // Update chart appearance based on analysis type
+                if (plotType === 'deviation' || plotType === 'log') {
+                    secondaryChart.data.datasets[0].label = 'Deviation from Trend (%)';
+                    secondaryChart.data.datasets[0].borderColor = theme.warning;
+                    secondaryChart.data.datasets[0].backgroundColor = 'rgba(255, 193, 7, 0.1)';
+                    
+                    secondaryChart.options.scales.y.ticks.callback = function(value) {
+                        return value + '%';
+                    };
+                } else if (plotType === '4yr') {
+                    secondaryChart.data.datasets[0].label = '4-Year Moving Average';
+                    secondaryChart.data.datasets[0].borderColor = theme.success;
+                    secondaryChart.data.datasets[0].backgroundColor = 'rgba(25, 135, 84, 0.1)';
+                    
+                    secondaryChart.options.scales.y.ticks.callback = function(value) {
+                        return '$' + value.toLocaleString();
+                    };
+                }
+                
+                secondaryChart.update();
+                
+                // Hide loading states
+                document.getElementById('main-graph-loading').classList.add('hidden');
+                document.getElementById('secondary-graph-loading').classList.add('hidden');
+            }, 800);
+        }
+    </script>
 </body>
 </html>
